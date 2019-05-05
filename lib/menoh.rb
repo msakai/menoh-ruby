@@ -28,14 +28,15 @@ module Menoh
       int8: Numo::Int8,
       int16: Numo::Int16,
       int32: Numo::Int32,
-      int64: Numo::Int64,
-    }
-    
+      int64: Numo::Int64
+    }.freeze
+
     def initialize(menoh, option)
       if option[:input_layers].nil? || option[:input_layers].empty?
         raise "Required ':input_layers'"
       end
       raise "Required ':input_layers'" unless option[:input_layers].instance_of?(Array)
+
       option[:input_layers].each_with_index do |input_layer, i|
         raise 'Invalid option : input_layers' unless input_layer.instance_of?(Hash)
         raise "Invalid name for input_layer[#{i}]" unless input_layer[:name].instance_of?(String)
@@ -46,7 +47,7 @@ module Menoh
       end
 
       option = option.dup
-      if option.has_key?(:backend_config)
+      if option.key?(:backend_config)
         config = option[:backend_config]
         unless config.nil? || config.is_a?(String)
           option[:backend_config] = JSON.dump(config)
@@ -58,16 +59,25 @@ module Menoh
       yield self if block_given?
     end
 
-    def run(dataset)
+    def run(dataset, numo_narray: false)
       raise 'Invalid dataset' if !dataset.instance_of?(Array) || dataset.empty?
       if dataset.length != @option[:input_layers].length
         raise "Invalid input num: expected==#{@option[:input_layers].length} actual==#{dataset.length}"
       end
+
       dataset.each do |input|
-        if !input[:data].instance_of?(Array) || input[:data].empty?
+        raise "Empty data for layer #{input[:name]}" if input[:data].empty?
+
+        if input[:data].instance_of?(Array)
+          set_data(input[:name], input[:data])
+        elsif input[:data].instance_of?(Numo::SFloat)
+          if dataset.length != @option[:input_layers].length
+            raise "Invalid input num: expected==#{@option[:input_layers].length} actual==#{dataset.length}"
+          end
+          set_data_str(input[:name], input[:data].to_binary)
+        else
           raise "Invalid dataset for layer #{input[:name]}"
         end
-        set_data(input[:name], input[:data])
       end
 
       # run
@@ -75,33 +85,19 @@ module Menoh
 
       # reshape result
       results = @option[:output_layers].map do |name|
-        buffer = get_data(name)
-        shape = get_shape(name)
-        { name: name, shape: shape, data: Util.reshape(buffer, shape) }
-      end
-
-      yield results if block_given?
-      results
-    end
-
-    def run_numo(dataset)      
-      raise 'Invalid dataset' if !dataset.instance_of?(Array) || dataset.empty?
-      if dataset.length != @option[:input_layers].length
-        raise "Invalid input num: expected==#{@option[:input_layers].length} actual==#{dataset.length}"
-      end
-      dataset.each do |input|
-        set_data_str(input[:name], input[:data].to_binary)
-      end
-
-      # run
-      native_run
-
-      results = {}
-      @option[:output_layers].each do |name|
         dtype = get_dtype(name)
-        c = DTYPE_TO_NUMO_NARRAY_CLASS[dtype]
-        raise InvalidDTypeError.new("unsupported dtype: #{dtype}") if c.nil?
-        results[name] = c.from_binary(get_data_str(name), get_shape(name))
+        shape = get_shape(name)
+        data = nil
+        if numo_narray
+          c = DTYPE_TO_NUMO_NARRAY_CLASS[dtype]
+          raise InvalidDType, "unsupported dtype: #{dtype}" if c.nil?
+
+          data = c.from_binary(get_data_str(name), get_shape(name))
+        else
+          buffer = get_data(name)
+          data = Util.reshape(buffer, shape)
+        end
+        { name: name, shape: shape, data: data }
       end
 
       yield results if block_given?

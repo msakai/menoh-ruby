@@ -26,6 +26,7 @@ class MenohTest < Minitest::Test
     }
     model = onnx.make_model(model_opt)
     assert_instance_of(Menoh::MenohModel, model)
+    # input: Array, output: Array
     10.times do
       imageset = [
         {
@@ -38,24 +39,21 @@ class MenohTest < Minitest::Test
       assert_equal(MNIST_OUT_NAME, inferenced_results.first[:name])
       assert_equal(batch_size, inferenced_results.first[:data].length)
     end
-  end
-
-  def test_menoh_basic_function_numo
-    onnx = Menoh::Menoh.new(MNIST_ONNX_FILE)
-    assert_instance_of(Menoh::Menoh, onnx)
-    batch_size = 3
-    model_opt = {
-      backend: 'mkldnn',
-      input_layers: [
+    # input: Array, output: Numo::SFloat
+    10.times do
+      imageset = [
         {
           name: MNIST_IN_NAME,
-          dims: [batch_size, 1, 28, 28]
+          data: (0..(batch_size - 1)).map { |_i| (0..(1 * 28 * 28 - 1)).to_a }.flatten
         }
-      ],
-      output_layers: [MNIST_OUT_NAME]
-    }
-    model = onnx.make_model(model_opt)
-    assert_instance_of(Menoh::MenohModel, model)
+      ]
+      inferenced_results = model.run(imageset, numo_narray: true)
+      assert_instance_of(Array, inferenced_results)
+      assert_equal(MNIST_OUT_NAME, inferenced_results.first[:name])
+      assert_instance_of(Numo::SFloat, inferenced_results.first[:data])
+      assert_equal([batch_size, 10], inferenced_results.first[:data].shape)
+    end
+    # input: Numo::SFloat, output: Numo::SFloat
     10.times do
       imageset = [
         {
@@ -63,10 +61,24 @@ class MenohTest < Minitest::Test
           data: Numo::SFloat.zeros(batch_size, 1, 28, 28)
         }
       ]
-      inferenced_results = model.run_numo imageset
-      assert_instance_of(Hash, inferenced_results)
-      assert_instance_of(Numo::SFloat, inferenced_results[MNIST_OUT_NAME])
-      assert_equal([batch_size, 10], inferenced_results[MNIST_OUT_NAME].shape)
+      inferenced_results = model.run(imageset, numo_narray: true)
+      assert_instance_of(Array, inferenced_results)
+      assert_equal(MNIST_OUT_NAME, inferenced_results.first[:name])
+      assert_instance_of(Numo::SFloat, inferenced_results.first[:data])
+      assert_equal([batch_size, 10], inferenced_results.first[:data].shape)
+    end
+    # input: Numo::SFloat, output: Array
+    10.times do
+      imageset = [
+        {
+          name: MNIST_IN_NAME,
+          data: Numo::SFloat.zeros(batch_size, 1, 28, 28)
+        }
+      ]
+      inferenced_results = model.run(imageset)
+      assert_instance_of(Array, inferenced_results)
+      assert_equal(MNIST_OUT_NAME, inferenced_results.first[:name])
+      assert_equal(batch_size, inferenced_results.first[:data].length)
     end
   end
 
