@@ -47,11 +47,11 @@ class MenohTest < Minitest::Test
           data: (0..(batch_size - 1)).map { |_i| (0..(1 * 28 * 28 - 1)).to_a }.flatten
         }
       ]
-      inferenced_results = model.run(imageset, numo_narray: true)
-      assert_instance_of(Array, inferenced_results)
-      assert_equal(MNIST_OUT_NAME, inferenced_results.first[:name])
-      assert_instance_of(Numo::SFloat, inferenced_results.first[:data])
-      assert_equal([batch_size, 10], inferenced_results.first[:data].shape)
+      inference_results = model.run(imageset, numo_narray: true)
+      assert_instance_of(Array, inference_results)
+      assert_equal(MNIST_OUT_NAME, inference_results.first[:name])
+      assert_instance_of(Numo::SFloat, inference_results.first[:data])
+      assert_equal([batch_size, 10], inference_results.first[:data].shape)
     end
     # input: Numo::SFloat, output: Numo::SFloat
     10.times do
@@ -61,11 +61,11 @@ class MenohTest < Minitest::Test
           data: Numo::SFloat.zeros(batch_size, 1, 28, 28)
         }
       ]
-      inferenced_results = model.run(imageset, numo_narray: true)
-      assert_instance_of(Array, inferenced_results)
-      assert_equal(MNIST_OUT_NAME, inferenced_results.first[:name])
-      assert_instance_of(Numo::SFloat, inferenced_results.first[:data])
-      assert_equal([batch_size, 10], inferenced_results.first[:data].shape)
+      inference_results = model.run(imageset, numo_narray: true)
+      assert_instance_of(Array, inference_results)
+      assert_equal(MNIST_OUT_NAME, inference_results.first[:name])
+      assert_instance_of(Numo::SFloat, inference_results.first[:data])
+      assert_equal([batch_size, 10], inference_results.first[:data].shape)
     end
     # input: Numo::SFloat, output: Array
     10.times do
@@ -75,10 +75,10 @@ class MenohTest < Minitest::Test
           data: Numo::SFloat.zeros(batch_size, 1, 28, 28)
         }
       ]
-      inferenced_results = model.run(imageset)
-      assert_instance_of(Array, inferenced_results)
-      assert_equal(MNIST_OUT_NAME, inferenced_results.first[:name])
-      assert_equal(batch_size, inferenced_results.first[:data].length)
+      inference_results = model.run(imageset)
+      assert_instance_of(Array, inference_results)
+      assert_equal(MNIST_OUT_NAME, inference_results.first[:name])
+      assert_equal(batch_size, inference_results.first[:data].length)
     end
   end
 
